@@ -7,6 +7,12 @@
 ///
 /// @brief A simple ray-tracing benchmark test.
 
+#ifndef _USE_MATH_DEFINES
+#define _USE_MATH_DEFINES
+#endif
+
+#include "gtest/gtest.h"
+
 #include <nanovdb/util/IO.h>
 #include <nanovdb/util/Ray.h>
 #include <nanovdb/util/HDDA.h>

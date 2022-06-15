@@ -1,6 +1,7 @@
 // Copyright Contributors to the OpenVDB Project
 // SPDX-License-Identifier: MPL-2.0
 
+#define _USE_MATH_DEFINES
 #include <cmath>
 #include <chrono>
 

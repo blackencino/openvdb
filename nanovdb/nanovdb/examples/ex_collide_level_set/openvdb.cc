@@ -3,6 +3,7 @@
 
 #if defined(NANOVDB_USE_OPENVDB)
 
+#define _USE_MATH_DEFINES
 #include <cmath>
 #include <chrono>
 
@@ -36,4 +37,4 @@ void runOpenVDB(nanovdb::GridHandle<BufferT>& handle, int numIterations, int num
     // Not yet implemented...
 }
 
-#endif
+#endif

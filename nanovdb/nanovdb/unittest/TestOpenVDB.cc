@@ -15,6 +15,7 @@
 #include <nanovdb/util/NodeManager.h>
 #include <nanovdb/util/GridBuilder.h>
 #include <nanovdb/util/Ray.h>
+#include <nanovdb/util/GridStats.h>
 #include <nanovdb/util/HDDA.h>
 
 #if !defined(_MSC_VER) // does not compile in msvc c++ due to zero-sized arrays.
@@ -205,6 +206,47 @@ protected:
 
     openvdb::util::CpuTimer mTimer;
 }; // TestOpenVDB
+
+// make -j && ./unittest/testOpenVDB --gtest_break_on_failure --gtest_filter="*getExtrema"
+TEST_F(TestOpenVDB, getExtrema)
+{
+    openvdb::io::File file("/home/kmu/dev/data/vdb/bunny.vdb");
+    file.open(false); //disable delayed loading
+    auto srcGrid = openvdb::gridPtrCast<openvdb::FloatGrid>(file.readGrid(file.beginName().gridName()));
+    auto handle = nanovdb::openToNanoVDB(*srcGrid, nanovdb::StatsMode::All);
+    EXPECT_TRUE(handle);
+    auto* dstGrid = handle.grid<float>();
+    EXPECT_TRUE(dstGrid);
+    auto dstAcc = dstGrid->getAccessor();
+    auto indexToWorldMap = srcGrid->transform().baseMap();
+    const auto a = srcGrid->evalActiveVoxelBoundingBox();
+    const auto b = openvdb::math::BBox<openvdb::Vec3d>(a.min().asVec3d(), 
+                                                       a.max().asVec3d()).applyMap(*indexToWorldMap);
+    //std::cerr << "Index bbox of all active values: " << a << std::endl;
+    //std::cerr << "World bbox of all active values: " << b << std::endl;
+
+    const openvdb::Vec3d wMin(-5.0, -5.0, -5.0), wMax(10.0, 10.0, 10.0);
+    const openvdb::math::BBox<openvdb::Vec3d> wBBox(wMin, wMax);
+    const openvdb::math::BBox<openvdb::Vec3d> iBBox = wBBox.applyInverseMap(*indexToWorldMap);
+    //std::cerr << "iBBox = " << iBBox << ", wBBox = " << wBBox << std::endl;
+
+    const nanovdb::CoordBBox bbox(nanovdb::Round<nanovdb::Coord>(iBBox.min()),
+                                  nanovdb::Round<nanovdb::Coord>(iBBox.max()));
+    //std::cerr << "bbox = " << bbox << std::endl;
+
+    nanovdb::NodeManager<nanovdb::FloatGrid> mgr(*dstGrid);
+    //std::cerr << "Root child nodes: " << mgr.nodeCount(2) << std::endl;
+
+    //mTimer.start("getExtrema");
+    nanovdb::Extrema<float> ext1 = nanovdb::getExtrema(*dstGrid, bbox), ext2;
+    //mTimer.restart("naive approach");
+    for (auto it = bbox.begin(); it; ++it) ext2.add(dstAcc.getValue(*it));
+    //mTimer.stop();
+    //std::cerr << "min = " << ext1.min() << ", max = " << ext1.max() << std::endl;
+    //std::cerr << "min = " << ext2.min() << ", max = " << ext2.max() << std::endl;
+    EXPECT_EQ(ext1.min(), ext2.min());
+    EXPECT_EQ(ext1.max(), ext2.max());
+}
 
 TEST_F(TestOpenVDB, Basic)
 {
